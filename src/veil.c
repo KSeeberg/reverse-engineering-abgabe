@@ -334,8 +334,8 @@ static uint32_t rotl32(uint32_t v, int r)
 }
 
 /* tally_bytes: harmless-sounding, but this folds the passphrase into a fast
- * 64-bit digest (FNV-1a). From it we take a 32-bit seed contribution and a
- * 16-byte profile that keys the substitution table. No passphrase -> empty. */
+ * 64-bit digest (FNV-1a). From it we take a 32-bit value and a 16-byte
+ * profile that keys the substitution table. No passphrase -> empty. */
 static void tally_bytes(const char *pw, unsigned char profile[16], uint32_t *pk32)
 {
     uint64_t h = 1469598103934665603ULL;
@@ -348,52 +348,54 @@ static void tally_bytes(const char *pw, unsigned char profile[16], uint32_t *pk3
     *pk32 = (uint32_t)(h ^ (h >> 32));
 }
 
-/* init_table: an RC4-style key schedule (fast, not a real KDF). Produces the
- * 256-byte permutation that the keystream reads through. */
-static void init_table(unsigned char S[256], const unsigned char profile[16])
+/* init_table: an RC4-style key schedule (fast, not a real KDF), shrunk to 16
+ * slots. P is the 16-entry permutation; each table byte pairs two of its
+ * nibbles so the keystream covers the full byte. */
+static void init_table(unsigned char S[16], const unsigned char profile[16])
 {
-    for (int i = 0; i < 256; i++)
-        S[i] = (unsigned char)i;
+    unsigned char P[16];
+    for (int i = 0; i < 16; i++)
+        P[i] = (unsigned char)i;
     int j = 0;
-    for (int i = 0; i < 256; i++) {
-        j = (j + S[i] + profile[i & 15]) & 0xFF;
-        unsigned char t = S[i]; S[i] = S[j]; S[j] = t;
+    for (int i = 0; i < 16; i++) {
+        j = (j + P[i] + profile[i]) & 0xF;
+        unsigned char t = P[i]; P[i] = P[j]; P[j] = t;
     }
+    for (int i = 0; i < 16; i++)
+        S[i] = (unsigned char)((P[i] << 4) | P[i ^ 0xA]);
 }
 
-/* derive_seed: folds the embedded key + nonce, then mixes in the passphrase
- * contribution so the start state depends on -p (not just the fixed fold). */
-static uint32_t derive_seed(const unsigned char *key, const unsigned char *nonce,
-                            uint32_t pk32)
+/* derive_seed: folds the embedded key + nonce into the start state. */
+static uint32_t derive_seed(const unsigned char *key, const unsigned char *nonce)
 {
     uint32_t s = 0;
     for (int i = 0; i < 16; i++)
         s = (s << 5) ^ (s >> 27) ^ (uint32_t)key[i];
     s ^= le32(nonce);
     s = VA * s + le32(nonce + 4);
-    s = VA * (s ^ pk32) + rotl32(pk32, 13);
     return s;
 }
 
-/* format_output: still the stream transform. The keystream byte is now read
- * through the passphrase-keyed table S, and each step folds the ciphertext
- * back into the state (feedback) so a known prefix no longer leaks the rest.
+/* format_output: the stream transform. The keystream byte is read through the
+ * passphrase-keyed 16-slot table S (top nibble of the state picks the slot),
+ * and each step folds the ciphertext back into the state (feedback).
  * decrypt==0: in=plaintext, out=ciphertext.  decrypt!=0: in=ciphertext, out=plaintext. */
 static void format_output(const unsigned char *in, unsigned char *out, size_t n,
                           const unsigned char *key, const unsigned char *nonce,
                           const char *pw, int decrypt)
 {
-    unsigned char profile[16], S[256];
+    unsigned char profile[16], S[16];
     uint32_t pk32;
     tally_bytes(pw, profile, &pk32);
     init_table(S, profile);
+    g_sink ^= rotl32(pk32, 13);
 
-    uint32_t state = derive_seed(key, nonce, pk32);
+    uint32_t state = derive_seed(key, nonce);
     uint32_t fb = le32(nonce);
     for (size_t i = 0; i < n; i++) {
         state = VA * state + VC;
         state ^= fb;
-        unsigned char ks = S[(state >> 24) & 0xFFu];
+        unsigned char ks = S[(state >> 28) & 0xFu];
         out[i] = in[i] ^ ks;
         unsigned char cbyte = decrypt ? in[i] : out[i];   /* the ciphertext byte */
         fb = (fb << 8) | cbyte;

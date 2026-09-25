@@ -1,68 +1,47 @@
+Ihnen liegt die verschlüsselte Datei `message.enc` vor, die mit dem Programm `veil`
+verschlüsselt wurde. Ziel ist die Entschlüsselung der Datei — analysieren Sie die
+Anwendung, um einen Ansatzpunkt zum Wiederherstellen des Klartexts zu finden.
+
+---
+
 # Reverse Engineering Challenge — "veil"
 
 Reverse-Engineering-Abgabe im Rahmen des Moduls **Advanced Practical IT-Security**
-der DHBW Mannheim.
+der DHBW Mannheim. Im Klartext steckt eine Flag im Format `DHBW{...}`.
 
-## Szenario
+## Was Sie bekommen
 
-`veil` ist ein kleines Kommandozeilen-Werkzeug, das eine Datei mit einer
-selbstgebauten Stromchiffre "verschleiert". Ein Kollege hat damit eine
-Nachricht verschlüsselt und nur die verschlüsselte Datei hinterlassen:
+| Datei             | Inhalt                                                  |
+|-------------------|---------------------------------------------------------|
+| `bin/veil-x86_64` | das kompilierte, gestrippte Programm (ELF, x86-64)      |
+| `message.enc`     | die verschlüsselte Datei                                |
+
+## Kurz-Doku (`./bin/veil-x86_64 --help`)
 
 ```
-message.enc
+Usage: veil [options] <infile> <outfile>
+
+Apply the veil stream transform to <infile>, writing the result
+to <outfile>. A random 8-byte nonce is prepended to the output,
+so each run produces a distinct file.
+
+Options:
+  -p <key>    passphrase (optional; required to decrypt)
+  -d          reverse the transform (decrypt)
+  -h, --help  show this help and exit
 ```
 
-Eure Aufgabe: **Rekonstruiert den Originaltext von `message.enc`.**
-Darin versteckt ist eine Flag im Format `DHBW{...}`.
+## Nachrichtenformat
 
-## Was ihr bekommt
+Jede mit `veil` verschlüsselte Nachricht beginnt mit demselben festen Header
+(genau 256 Byte ASCII, Zeilenende `\n`, auch nach der letzten Zeile); danach
+folgt der eigentliche Nachrichtentext:
 
-| Datei               | Inhalt                                                        |
-|---------------------|---------------------------------------------------------------|
-| `bin/veil-x86_64`   | das kompilierte, gestrippte Programm (ELF, x86-64)            |
-| `bin/veil-aarch64`  | dasselbe Programm für ARM64 (ELF, aarch64) — gleiche Chiffre  |
-| `src/veil.c`        | der (bewusst unübersichtliche) C-Quellcode, eine Datei        |
-| `build.sh`          | Build-Skript (`gcc -O2 -s`, x86-64 **und** aarch64)           |
-| `message.enc`       | die zu knackende Datei: `nonce (8 Byte) || ciphertext`        |
-
-Beide Binaries implementieren dieselbe Chiffre; `message.enc` passt zu beiden.
-
-## Ziel
-
-Aus `message.enc` den Klartext (inkl. Flag) wiederherstellen. Die Verschlüsselung
-ist **passphrasen-geschützt** — ihr müsst zusätzlich das Passwort finden.
-
-## Regeln & Hinweise
-
-- **Arbeitet am Binary.** Der mitgelieferte Quellcode ist absichtlich
-  irreführend benannt und mit Ablenkungen gespickt — verlasst euch nicht
-  blind auf Funktionsnamen. Die Wahrheit steht im kompilierten Programm.
-- Erlaubte Werkzeuge: **Ghidra** (empfohlen), radare2, objdump, gdb,
-  eigene Skripte (Python o.ä.), KI-Assistenz.
-- **Das Passwort besteht aus genau 5 Kleinbuchstaben (a–z).** Es fließt in den
-  Schlüssel ein; ein bekannter Klartext-Anfang allein reicht **nicht**, um den
-  Rest zu entschlüsseln. Rekonstruiert das Verfahren aus dem Binary und probiert
-  das Passwort entlang dieser Policy durch (Known-Plaintext als Orakel).
-- **Nur das Programm erneut auszuführen bringt euch nicht ans Ziel:** jeder
-  Lauf zieht eine neue Zufalls-Nonce. Zum Entschlüsseln braucht ihr das Passwort.
-- Alles, was ihr braucht (Algorithmus, Nonce-Handling, S-Box-/Seed-Ableitung),
-  steckt im Binary bzw. im Header von `message.enc`.
-
-## Ausführen
-
-```bash
-./bin/veil-x86_64 --help
-./bin/veil-x86_64 -p <passwort> <infile> <outfile>        # verschlüsseln: nonce || ciphertext
-./bin/veil-x86_64 -d -p <passwort> <infile> <outfile>     # entschlüsseln (-d)
 ```
-
-Auf ARM64 analog `./bin/veil-aarch64`.
-
-Selbst neu bauen (Linux, gcc; für ARM64 zusätzlich `gcc-aarch64-linux-gnu`):
-
-```bash
-bash build.sh
+-----BEGIN VEIL MESSAGE-----
+Format: veil/1 stream transform, 8-byte nonce as prefix
+Origin: DHBW Mannheim - Advanced Practical IT-Security
+Notice: this header is fixed and identical in every
+veil message. The body follows the marker.
+-----BEGIN BODY-----
 ```
-
-Viel Erfolg.
