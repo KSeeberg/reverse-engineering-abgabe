@@ -1,0 +1,10 @@
+# Private reference solution -- must never be published.
+solution/
+
+# Build artefacts that are not part of the handout.
+*.o
+reenc.out
+
+# Editor / OS noise
+*.swp
+.DS_Store
