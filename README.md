@@ -30,7 +30,8 @@ Beide Binaries implementieren dieselbe Chiffre; `message.enc` passt zu beiden.
 
 ## Ziel
 
-Aus `message.enc` den Klartext (inkl. Flag) wiederherstellen.
+Aus `message.enc` den Klartext (inkl. Flag) wiederherstellen. Die Verschlüsselung
+ist **passphrasen-geschützt** — ihr müsst zusätzlich das Passwort finden.
 
 ## Regeln & Hinweise
 
@@ -39,17 +40,21 @@ Aus `message.enc` den Klartext (inkl. Flag) wiederherstellen.
   blind auf Funktionsnamen. Die Wahrheit steht im kompilierten Programm.
 - Erlaubte Werkzeuge: **Ghidra** (empfohlen), radare2, objdump, gdb,
   eigene Skripte (Python o.ä.), KI-Assistenz.
+- **Das Passwort besteht aus genau 5 Kleinbuchstaben (a–z).** Es fließt in den
+  Schlüssel ein; ein bekannter Klartext-Anfang allein reicht **nicht**, um den
+  Rest zu entschlüsseln. Rekonstruiert das Verfahren aus dem Binary und probiert
+  das Passwort entlang dieser Policy durch (Known-Plaintext als Orakel).
 - **Nur das Programm erneut auszuführen bringt euch nicht ans Ziel:** jeder
-  Lauf zieht eine neue Zufalls-Nonce, und das Tool kann ohnehin nur
-  verschlüsseln. Ihr müsst die Chiffre verstehen und selbst nachbauen.
-- Alles, was ihr braucht (Schlüssel, Algorithmus, Nonce), steckt im Binary
-  bzw. im Header von `message.enc`.
+  Lauf zieht eine neue Zufalls-Nonce. Zum Entschlüsseln braucht ihr das Passwort.
+- Alles, was ihr braucht (Algorithmus, Nonce-Handling, S-Box-/Seed-Ableitung),
+  steckt im Binary bzw. im Header von `message.enc`.
 
 ## Ausführen
 
 ```bash
 ./bin/veil-x86_64 --help
-./bin/veil-x86_64 <infile> <outfile>      # erzeugt: nonce || ciphertext
+./bin/veil-x86_64 -p <passwort> <infile> <outfile>        # verschlüsseln: nonce || ciphertext
+./bin/veil-x86_64 -d -p <passwort> <infile> <outfile>     # entschlüsseln (-d)
 ```
 
 Auf ARM64 analog `./bin/veil-aarch64`.
