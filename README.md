@@ -12,7 +12,7 @@ src/                        Quellen und gebaute Artefakte
   veil-x86_64               kompilierte Binary (ELF, x86-64, stripped)
   veil-aarch64              ARM-Variante derselben Chiffre (Zusatz)
   message.enc              die verschlüsselte Nachricht
-  build.sh                  Build-Script (baut beide Binaries nach src/)
+  build.sh                  Build-Script (baut beide Binaries nach src/, kopiert veil-x86_64 nach aufgabenordner/)
 
 doc/                        Dokumentation und Lösung
   aufgabenstellung.md       Aufgabenstellung (wie sie der Studi bekommt)

@@ -116,6 +116,12 @@ def solve(blob: bytes) -> bytes:
     return bytes(c ^ S[k] for c, k in zip(ct, idx))
 
 
+def _read_reference(path: str) -> bytes:
+    """plaintext.txt with LF line endings (git may check it out as CRLF on Windows)."""
+    with open(path, "rb") as f:
+        return f.read().replace(b"\r\n", b"\n")
+
+
 def _veil(*args: str) -> None:
     r = subprocess.run([BINARY, *args], capture_output=True)
     if r.returncode != 0:
@@ -130,16 +136,18 @@ def selftest(rounds: int = 20) -> bool:
     if not os.access(BINARY, os.X_OK) or not os.path.exists(ref_path):
         print("[FAIL] self-test: binary or plaintext.txt missing", file=sys.stderr)
         return False
-    with open(ref_path, "rb") as f:
-        plaintext = f.read()
+    plaintext = _read_reference(ref_path)
     alphabet = string.ascii_letters + string.digits
     good = 0
     with tempfile.TemporaryDirectory() as tmp:
+        pt_path = os.path.join(tmp, "pt")
         ct_path = os.path.join(tmp, "ct")
+        with open(pt_path, "wb") as f:
+            f.write(plaintext)
         for _ in range(rounds):
             pw = "".join(secrets.choice(alphabet)
                          for _ in range(1 + secrets.randbelow(16)))
-            _veil("-p", pw, ref_path, ct_path)
+            _veil("-p", pw, pt_path, ct_path)
             with open(ct_path, "rb") as f:
                 blob = f.read()
             del pw  # recovery below works on the file alone
@@ -174,8 +182,7 @@ def main() -> int:
 
         ref_path = os.path.join(HERE, "plaintext.txt")
         if os.path.exists(ref_path):
-            with open(ref_path, "rb") as f:
-                expected = f.read()
+            expected = _read_reference(ref_path)
             if recovered == expected:
                 print("[OK] recovered plaintext is byte-identical to plaintext.txt")
             else:
