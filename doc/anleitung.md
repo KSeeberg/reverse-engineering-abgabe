@@ -5,6 +5,29 @@ Strom-Chiffre ("veil stream transform") umwandelt. Beim Verschlüsseln wird eine
 zufällige 8-Byte-Nonce vorangestellt, sodass jeder Lauf eine andere Ausgabedatei
 erzeugt.
 
+## Bauen
+
+Die fertige Binary `veil-x86_64` liegt bereits im Ordner `src/`. Neu bauen lässt
+sie sich mit dem beiliegenden Build-Script (baut nach `src/`, benötigt `gcc`):
+
+```bash
+cd src
+./build.sh
+```
+
+`build.sh` erzeugt `veil-x86_64` (Pflicht) und, falls ein aarch64-Cross-Compiler
+vorhanden ist, zusätzlich `veil-aarch64`. Ist das Skript nicht ausführbar, vorher
+`chmod +x build.sh` ausführen.
+
+## Ausführen
+
+```bash
+cd src
+./veil-x86_64 --help          # Hilfe anzeigen
+```
+
+Ist die Datei nicht ausführbar, einmalig `chmod +x veil-x86_64` setzen.
+
 ## Aufruf
 
 ```
