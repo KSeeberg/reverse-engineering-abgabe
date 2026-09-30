@@ -30,18 +30,3 @@ Options:
   -d          reverse the transform (decrypt)
   -h, --help  show this help and exit
 ```
-
-## Nachrichtenformat
-
-Jede mit `veil` verschlüsselte Nachricht beginnt mit demselben festen Header
-(genau 256 Byte ASCII, Zeilenende `\n`, auch nach der letzten Zeile); danach
-folgt der eigentliche Nachrichtentext:
-
-```
------BEGIN VEIL MESSAGE-----
-Format: veil/1 stream transform, 8-byte nonce as prefix
-Origin: DHBW Mannheim - Advanced Practical IT-Security
-Notice: this header is fixed and identical in every
-veil message. The body follows the marker.
------BEGIN BODY-----
-```

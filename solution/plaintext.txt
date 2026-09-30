@@ -1,13 +1,27 @@
------BEGIN VEIL MESSAGE-----
-Format: veil/1 stream transform, 8-byte nonce as prefix
-Origin: DHBW Mannheim - Advanced Practical IT-Security
-Notice: this header is fixed and identical in every
-veil message. The body follows the marker.
------BEGIN BODY-----
+Das Lied von der kleinen Tabelle
+(ein dummes Gedicht ueber schwache Kryptografie)
 
-Advanced Practical IT-Security - Reverse Engineering Challenge
+Es war einmal ein Passwort, ganz lang und ganz geheim,
+es glaubte sich im Tresor und sang dazu im Reim.
+Doch tief im Bauch der Maschine, da sitzt ein kleines Ding:
+sechzehn winzige Faecher, mehr Platz gibt's nicht, ping-ping!
 
-The passphrase only shapes a tiny 16-slot table. Seed and feedback
-are public, so whoever knows how a message starts can read the rest.
+Der Startwert ist kein Geheimnis, die Nonce liegt offen da,
+die Rueckkopplung frisst Chiffretext, den hat ja jeder, ja!
+So laeuft die ganze Zahlenfolge ohne Passwort ab,
+und keiner muss was raten, nur ein bisschen Mathe-Knack.
+
+Wer zaehlt, wie oft ein Zeichen in seinem Fach erscheint,
+der sieht: das Leerzeichen gewinnt, egal, wie sehr man weint.
+Ein Fach nach dem anderen fliegt auf, ganz ohne Brute Force,
+das Passwort bleibt ein Phantom, nur Schmuck und Mode, ein Gruss.
+
+Drum merke dir, mein lieber Freund, und schreib's dir hinters Ohr:
+Ein Schloss mit sechzehn Schluesseln ist kein Schloss, es ist ein Tor.
+Wer wirklich Geheimnisse hueten will, nimmt mehr als Fach und Kniff,
+und liest er dies, dann hat er's raus - der Rest ist nur noch Griff.
+
+Und weil du so fleissig gesucht hast und nicht aufgegeben hast,
+bekommst du jetzt als Lohn die Flagge, ohne Hast:
 
 DHBW{p4ssw0rd_k3y3d_str3am_2026}

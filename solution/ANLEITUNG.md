@@ -1,47 +1,52 @@
-# Lösungsweg (privat) — veil challenge ("S-Box-Leak"-Variante)
+# Lösungsweg (privat) — veil challenge
 
 Diese Datei liegt in `solution/` und ist per `.gitignore` vom Repo ausgeschlossen.
-Flag: `DHBW{p4ssw0rd_k3y3d_str3am_2026}`.
+Flag: `DHBW{p4ssw0rd_k3y3d_str3am_2026}`
 
-**Schwachstelle in einem Satz:** Das Passwort keyt nur eine 16-Einträge-S-Box, während
-Seed (Nonce + Binary-Konstante) und Rückkopplung (Ciphertext) öffentlich sind — also ist
-die komplette S-Box-Index-Folge ohne Passwort berechenbar, und der feste, dokumentierte
-256-Byte-Header verrät alle 16 S-Box-Werte.
+## Die Idee in drei Sätzen
+Das Passwort steuert nur eine winzige Tabelle mit **16 Fächern**. Alles andere, nämlich
+Startwert, Nonce und Rückkopplung, ist öffentlich. Deshalb kann man für jedes Byte der Datei
+ausrechnen, **welches Fach** benutzt wurde, und ohne das Passwort zu kennen, die 16 Fächer per
+Häufigkeitsanalyse erraten.
 
-Das beim Erzeugen von `message.enc` benutzte Passwort (`vhofmuepybss`, zufällig) wird für den
-Angriff **nicht** gebraucht und steht nur der Vollständigkeit halber hier.
+Das Passwort (`veil`-Aufruf mit `-p`) wird für den Angriff nicht gebraucht.
+Es steht nur beim Erzeugen von `make_message.py` in der Ausgabe.
 
----
+## Wie `veil` verschlüsselt (aus dem Binary gelesen)
+Im Binary steckt viel Ablenkung (AES-S-Box, Fake-Schlüssel, Dummy-Funktionen, `ptrace`).
+Der echte Teil ist klein:
 
-## Das Verfahren (aus dem Binary)
-Viel Ablenkung wie gehabt: AES-S-Box + `decrypt_payload`, Fake-Key-Tabelle, `verify_password`
-(strcmp gegen Decoy-String, steuert nur die Meldung „invalid license key“), Bogus-Funktionen über
-eine Funktionszeiger-Tabelle, Opaque Predicates aus `volatile`/`getpid`, ptrace-Anti-Debug.
-Der echte Weg (unauffällig benannt):
-- `tally_bytes` — FNV-1a-64 über `-p` (Offset `1469598103934665603`, Prime `0x100000001b3`).
-  Liefert ein 16-Byte-Profil; der 32-bit-Wert `pk32` landet nur noch im Noise-Sink.
-- `init_table` — RC4-KSA über 16 Slots (`& 0xF`) → Permutation `P`,
-  dann `S[i] = (P[i]<<4) | P[i^0xA]` (16 Einträge, volle Byte-Werte).
-- `derive_seed` — Fold des eingebetteten Keys (`ENC_KEYS[3]^KPAD`) = Konstante **0xC8480C4A**,
-  dann `s ^= le32(nonce[0:4]); s = A*s + le32(nonce[4:8])`. **Kein Passwort.**
-- `format_output` — pro Byte: `state = A*state + C; state ^= fb; ks = S[(state>>28)&0xF];
-  out = in^ks; fb = (fb<<8)|ciphertext_byte`. **A=0x71FED3C5**, **C=0x2A9F1B8D**.
+1. **Passwort → Tabelle.** `tally_bytes` macht aus dem Passwort einen Hash (FNV-1a), `init_table`
+   mischt daraus 16 Bytes `S[0..15]`. Das ist die einzige Stelle, an der das Passwort wirkt.
+2. **Startwert.** `derive_seed` nimmt einen im Binary eingebauten Schlüssel plus die Nonce
+   (die ersten 8 Bytes der Datei). **Kein Passwort.**
+3. **Pro Byte** (`format_output`):
+   ```
+   state = A*state + C        (A=0x71FED3C5, C=0x2A9F1B8D)
+   state ^= fb
+   fach  = (state >> 28) & 0xF
+   out   = in ^ S[fach]
+   fb    = (fb << 8) | chiffretext_byte
+   ```
+   `fb` (Rückkopplung) bekommt nur Chiffretext-Bytes, und den hat der Angreifer.
 
-## Angriff Schritt für Schritt (ohne Passwort)
-1. **Triage:** `file` → x86-64, stripped; `--help` zeigt `-p`/`-d`; Header von `message.enc`
-   = 8-Byte-Nonce; README dokumentiert den festen 256-Byte-Klartext-Header.
-2. **Ghidra:** Keystream-Schleife finden (LCG-Konstanten `imul 0x71FED3C5`, `add 0x2A9F1B8D`,
-   `shr 28`), von dort rückwärts `derive_seed`, `init_table`, `tally_bytes`. Erkennen:
-   `state` hängt nur an Nonce + Key-Fold, das Passwort wirkt nur über `S`.
-3. **Konstante holen:** Key-Fold `0xC8480C4A` (bzw. `ENC_KEYS[3]^KPAD` falten) — statisch oder
-   per gdb (Achtung ptrace: unter Debugger wird Key-Index 0 genommen).
-4. **Index-Folge berechnen:** `state` aus Nonce + Konstante seeden und über den ganzen Ciphertext
-   laufen lassen; `fb` wird nur mit Ciphertext-Bytes gefüttert → `idx_i = (state_i>>28)&0xF`
-   für jede Position, ohne Passwort.
-5. **S-Box aus dem Header lesen:** für `i < 256`: `S[idx_i] = header_i ^ ct_i`
-   (gleiche Indizes müssen gleiche Werte liefern = Konsistenzcheck).
-   Bei `message.enc` kommen alle 16 Indizes im Header vor.
-6. **Entschlüsseln:** `pt_i = ct_i ^ S[idx_i]` für die ganze Datei → Flag.
+## Der Angriff Schritt für Schritt
+1. **Triage.** `file bin/veil-x86_64` → x86-64, stripped. `--help` zeigt `-p` und `-d`.
+   Die ersten 8 Bytes von `message.enc` sind die Nonce.
+2. **Schleife im Decompiler finden** (Ghidra): Suche nach `imul 0x71FED3C5`, `add 0x2A9F1B8D`
+   und `shr 28`. Von dort rückwärts zu `derive_seed` und `init_table`.
+   Erkenntnis: Die Fach-Nummer hängt nicht vom Passwort ab.
+3. **Konstante holen.** Der eingebaute Schlüssel gefaltet ergibt `0xC8480C4A`
+   (`ENC_KEYS[3] ^ KPAD`, siehe `key_fold()` in `solve.py`).
+   Achtung: Unter einem Debugger nimmt das Programm wegen `ptrace` einen anderen Schlüssel.
+4. **Fach-Folge berechnen.** Mit Nonce und Konstante den `state` laufen lassen, `fb` mit den
+   Chiffretext-Bytes füttern. Ergebnis: für jede Position die Fach-Nummer 0–15.
+5. **Nach Fächern sortieren.** Alle Bytes, die dasselbe Fach benutzt haben, wurden mit **demselben**
+   Schlüsselbyte XOR-verknüpft. Das sind 16 kleine Probleme à „ein Schlüsselbyte raten".
+6. **Schlüsselbyte raten.** Pro Fach alle 256 Werte probieren. Der richtige liefert Text, der
+   nach Deutsch aussieht (Leerzeichen, `e`, `n`, `i` … sind häufig, Steuerzeichen kommen nicht vor).
+   `solve.py` vergibt dafür Punkte und nimmt den besten Wert.
+7. **Entschlüsseln.** `klartext = chiffretext ^ S[fach]` für die ganze Datei → Gedicht mit Flag.
 
 ```bash
 python3 solution/solve.py              # entschlüsselt message.enc + Selbsttest (20 Runden)
@@ -49,19 +54,21 @@ python3 solution/solve.py --no-selftest
 python3 solution/make_message.py       # message.enc + plaintext.txt neu erzeugen
 ```
 
-## Warum kein Brute-Force nötig ist
-Der einzige passwortabhängige Teil ist die Tabelle `S` — und die hat nur 16 Einträge, die man
-direkt aus Known-Plaintext abliest, statt sie über das Passwort zu erraten. Alles andere
-(Seed, Rückkopplung, Index-Folge) ist aus Datei + Binary öffentlich. Das Passwort (hier 12
-zufällige Buchstaben, beliebig lang/stark) spielt deshalb keine Rolle.
-Wahrscheinlichkeit, dass 256 Byte Header nicht alle 16 Indizes treffen: ≈ 16·(15/16)^256 ≈ 10⁻⁶;
-bei nur 64 Byte wären es ~23 %. Der Solver bricht in dem Fall mit
-„header covers only k/16 table indices … lengthen the header“ ab.
+## Warum das klappt (und kein Brute-Force nötig ist)
+- Die Tabelle hat nur 16 Einträge. Man muss sie nicht über das Passwort erraten, sondern liest sie
+  direkt aus dem Text ab.
+- Es gibt **keinen bekannten Klartext** mehr (der feste Header wurde entfernt), aber die Nachricht
+  ist normaler Text. Das reicht: bei ca. 1200 Bytes landen rund 75 Bytes in jedem Fach, genug für
+  eine sichere Häufigkeitsanalyse. Im Test wurden 60 von 60 frischen Verschlüsselungen fehlerfrei geknackt.
+- Bei sehr kurzen Nachrichten (wenige Bytes pro Fach) wird das Raten unsicher. Dann hilft ein
+  bekannter Nachrichtenanfang, zum Beispiel das Flag-Format `DHBW{`.
 
 ---
 
 ## Optional / Bonus
-- **Anti-Debug:** `ptrace(PTRACE_TRACEME)` → bei Debugger falscher Key-Index (0 statt 3).
+- **Anti-Debug:** `ptrace(PTRACE_TRACEME)` → unter Debugger falscher Schlüssel-Index (0 statt 3).
   Für die statische Lösung irrelevant.
-- **String-Deobfuskation:** Pad `SPAD = 5B 1F A7 3C D2 66 89 E4`, `enc[i]^SPAD[i&7]`.
+- **Strings entschlüsseln:** Pad `SPAD = 5B 1F A7 3C D2 66 89 E4`, `enc[i] ^ SPAD[i & 7]`.
+- **Gelöschter Diagnose-Print:** Früher gab `veil` auf Stderr zwei Hex-Bytes aus (z. B. `282b`).
+  Das war nur ein Köder und ist entfernt.
 - `bin/veil-aarch64` ist noch **nicht** neu gebaut (alte Chiffre) — braucht `gcc-aarch64-linux-gnu`.
