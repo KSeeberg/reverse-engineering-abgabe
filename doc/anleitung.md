@@ -55,3 +55,10 @@ Options:
 Lauffähig unter Ubuntu Linux (x86-64) als Kommandozeilenprogramm. Die ELF-Binary
 `veil-x86_64` ist statisch gelinkt gegen die glibc und benötigt keine weiteren
 Bibliotheken.
+
+## Für das Reverse Engineering benötigte Tools (Kurzüberblick)
+
+Für die Analyse werden ein Decompiler (Ghidra), die Standard-Triage-Tools
+`file` / `strings` / Hexdump (`xxd`), Python 3 (für das Lösungsskript) sowie eine
+Linux-Umgebung (getestet unter Kali Linux) benötigt. Die ausführliche Begründung
+und das genaue Vorgehen stehen in `loesung.md`.

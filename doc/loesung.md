@@ -30,6 +30,18 @@ Der echte Teil ist klein:
    ```
    `fb` (Rückkopplung) bekommt nur Chiffretext-Bytes, und den hat der Angreifer.
 
+## Benötigte Tools
+- **Decompiler (Ghidra).** Das Binary ist gestrippt; ohne Decompiler sieht man nur
+  rohen Maschinencode. Ghidra liefert die lesbare C-ähnliche Ausgabe, in der man die
+  echte Keystream-Schleife findet.
+- **`file`, `strings`, Hexdump (`xxd`).** Für die Triage: Dateityp, Optionen, Nonce-Header,
+  und um die Fake-Strings als Ablenkung zu erkennen. Die Ausgaben kopiert man bei
+  KI-Unterstützung Stück für Stück als Kontext ein.
+- **Python 3.** Zum Schreiben und Ausführen des Lösungsskripts (`solve.py`), das den
+  Angriff automatisiert und das Ergebnis per Selbsttest verifiziert.
+- **Linux-Umgebung (getestet unter Kali Linux).** Das Binary ist ein ELF für x86-64;
+  getestet wurde der Ablauf nur auf Kali.
+
 ## Der Angriff Schritt für Schritt
 1. **Triage.** `file src/veil-x86_64` → x86-64, stripped. `--help` zeigt `-p` und `-d`.
    Die ersten 8 Bytes von `message.enc` sind die Nonce.
