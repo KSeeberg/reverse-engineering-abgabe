@@ -2,9 +2,9 @@
 """Recover the plaintext of message.enc WITHOUT the passphrase.
 
 Usage:
-    python3 solution/solve.py [message.enc]      # decrypt + built-in self-test
-    python3 solution/solve.py --no-selftest [f]  # decrypt only
-    python3 solution/solve.py --selftest-only    # self-test only
+    python3 doc/solve.py [message.enc]      # decrypt + built-in self-test
+    python3 doc/solve.py --no-selftest [f]  # decrypt only
+    python3 doc/solve.py --selftest-only    # self-test only
 
 The attack ("16 drawers"):
   1. Seed and feedback do not depend on the passphrase (only on the nonce, a
@@ -24,9 +24,9 @@ import subprocess
 import sys
 import tempfile
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(HERE)
-BINARY = os.path.join(REPO, "bin", "veil-x86_64")
+HERE = os.path.dirname(os.path.abspath(__file__))     # doc/
+REPO = os.path.dirname(HERE)                          # Projektwurzel
+BINARY = os.path.join(REPO, "src", "veil-x86_64")
 
 NONCE_LEN = 8
 MASK32 = 0xFFFFFFFF
@@ -156,7 +156,7 @@ def main() -> int:
     ok = True
 
     if "--selftest-only" not in flags:
-        enc_path = args[0] if args else os.path.join(REPO, "message.enc")
+        enc_path = args[0] if args else os.path.join(REPO, "src", "message.enc")
         with open(enc_path, "rb") as f:
             blob = f.read()
         try:
@@ -165,7 +165,7 @@ def main() -> int:
             print(f"[FAIL] {e}", file=sys.stderr)
             return 1
 
-        with open(os.path.join(HERE, "recovered.txt"), "wb") as f:
+        with open(os.path.join(HERE, "decrypted_message.txt"), "wb") as f:
             f.write(recovered)
         print("nonce (hex):", blob[:NONCE_LEN].hex())
         print("--- recovered plaintext ---")

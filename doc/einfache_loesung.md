@@ -9,13 +9,13 @@ man die 16 Bytes per Häufigkeitsanalyse direkt aus dem Text ab. Kein Passwort, 
 
 ## Einfach ausführen
 ```bash
-python3 solution/solve.py                 # entschlüsselt message.enc + Selbsttest
-python3 solution/solve.py --no-selftest
-python3 solution/make_message.py          # message.enc + plaintext.txt neu erzeugen
+python3 doc/solve.py                 # entschlüsselt src/message.enc + Selbsttest
+python3 doc/solve.py --no-selftest
+python3 doc/make_message.py          # src/message.enc + doc/plaintext.txt neu erzeugen
 ```
 
 ## Die Schritte
-1. **Datei angucken** — `file bin/veil-x86_64` → x86-64, stripped. `--help` zeigt `-p` und `-d`. Die ersten 8 Bytes von `message.enc` sind die Nonce.
+1. **Datei angucken** — `file src/veil-x86_64` → x86-64, stripped. `--help` zeigt `-p` und `-d`. Die ersten 8 Bytes von `src/message.enc` sind die Nonce.
 2. **Echte Krypto in Ghidra finden** — such nach `imul 0x71FED3C5`, `add 0x2A9F1B8D`, `shr 28`. Das ist der Generator, der pro Byte ein „Fach" 0–15 aussucht. Merksatz: Fach hängt nur von Nonce + Chiffretext ab, nicht vom Passwort.
 3. **Startwert holen** — eingebaute Konstante = `0xC8480C4A` (in `solve.py` als `key_fold`). Nicht unter gdb laufen lassen — `ptrace`-Falle verbiegt den Wert.
 4. **Fach-Folge ausrechnen** — mit Nonce + Konstante den `state` durchlaufen lassen, Chiffretext als Rückkopplung füttern → für jede Position die Fach-Nummer 0–15.
@@ -47,4 +47,4 @@ Viel Ablenkung drin (AES-S-Box, Fake-Schlüssel, Dummy-Funktionen, `ptrace`). De
 - **Anti-Debug:** `ptrace(PTRACE_TRACEME)` → unter Debugger falscher Schlüssel-Index (0 statt 3). Für die statische Lösung egal.
 - **Strings entschlüsseln:** Pad `SPAD = 5B 1F A7 3C D2 66 89 E4`, `enc[i] ^ SPAD[i & 7]`.
 - **Gelöschter Diagnose-Print:** früher zwei Hex-Bytes auf Stderr (z. B. `282b`) — nur Köder, entfernt.
-- `bin/veil-aarch64` noch **nicht** neu gebaut (alte Chiffre) — braucht `gcc-aarch64-linux-gnu`.
+- `src/veil-aarch64` ist die ARM-Variante (per `src/build.sh` mitgebaut) — für die Aufgabe (x86-64) nicht nötig.

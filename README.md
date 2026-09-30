@@ -1,32 +1,46 @@
-Ihnen liegt die verschlüsselte Datei `message.enc` vor, die mit dem Programm `veil`
-verschlüsselt wurde. Ziel ist die Entschlüsselung der Datei — analysieren Sie die
-Anwendung, um einen Ansatzpunkt zum Wiederherstellen des Klartexts zu finden.
+# Reverse-Engineering-Abgabe — "veil"
 
----
+Reverse-Engineering-Challenge im Rahmen des Moduls **Advanced Practical
+IT-Security** der DHBW Mannheim. Im Klartext von `message.enc` steckt eine Flag
+im Format `DHBW{...}`.
 
-# Reverse Engineering Challenge — "veil"
-
-Reverse-Engineering-Abgabe im Rahmen des Moduls **Advanced Practical IT-Security**
-der DHBW Mannheim. Im Klartext steckt eine Flag im Format `DHBW{...}`.
-
-## Was Sie bekommen
-
-| Datei             | Inhalt                                                  |
-|-------------------|---------------------------------------------------------|
-| `bin/veil-x86_64` | das kompilierte, gestrippte Programm (ELF, x86-64)      |
-| `message.enc`     | die verschlüsselte Datei                                |
-
-## Kurz-Doku (`./bin/veil-x86_64 --help`)
+## Ordnerstruktur
 
 ```
-Usage: veil [options] <infile> <outfile>
+src/                        Quellen und gebaute Artefakte
+  veil.c                    Quellcode des Programms
+  veil-x86_64               kompilierte Binary (ELF, x86-64, stripped)
+  veil-aarch64              ARM-Variante derselben Chiffre (Zusatz)
+  message.enc              die verschlüsselte Nachricht
+  build.sh                  Build-Script (baut beide Binaries nach src/)
 
-Apply the veil stream transform to <infile>, writing the result
-to <outfile>. A random 8-byte nonce is prepended to the output,
-so each run produces a distinct file.
+doc/                        Dokumentation und Lösung
+  aufgabenstellung.md       Aufgabenstellung (wie sie der Studi bekommt)
+  anleitung.md              Nutzerdokumentation (--help)
+  loesung.md                ausführlicher Lösungsweg
+  einfache_loesung.md       kompakter Lösungsweg
+  decrypted_message.txt     der wiederhergestellte Klartext (mit Flag)
+  ki_einschaetzung.md       Einschätzung: wie gut hält der Schutz eine KI auf
+  solve.py                  Solver (Angriff ohne Passphrase) + Selbsttest
+  reference_cipher.py       Referenz-Implementierung der Chiffre
+  make_message.py           erzeugt message.enc + plaintext.txt neu
+  plaintext.txt             Original-Klartext (Referenz)
 
-Options:
-  -p <key>    passphrase (optional; required to decrypt)
-  -d          reverse the transform (decrypt)
-  -h, --help  show this help and exit
+aufgabenordner/             das, was der Studi zum Bearbeiten erhält
+  veil-x86_64
+  message.enc
+  aufgabenstellung.md
 ```
+
+## Schnellstart
+
+```bash
+# Bauen (aus src/)
+cd src && ./build.sh
+
+# Angriff / Verifikation (aus der Projektwurzel)
+python3 doc/solve.py                 # entschlüsselt src/message.enc + Selbsttest
+python3 doc/solve.py --no-selftest   # nur entschlüsseln
+```
+
+Flag: siehe `doc/decrypted_message.txt`.

@@ -1,6 +1,6 @@
 # Lösungsweg (privat) — veil challenge
 
-Diese Datei liegt in `solution/` und ist per `.gitignore` vom Repo ausgeschlossen.
+Diese Datei ist die ausführliche Lösungsdokumentation (Abgabe, 5P).
 Flag: `DHBW{p4ssw0rd_k3y3d_str3am_2026}`
 
 ## Die Idee in drei Sätzen
@@ -31,7 +31,7 @@ Der echte Teil ist klein:
    `fb` (Rückkopplung) bekommt nur Chiffretext-Bytes, und den hat der Angreifer.
 
 ## Der Angriff Schritt für Schritt
-1. **Triage.** `file bin/veil-x86_64` → x86-64, stripped. `--help` zeigt `-p` und `-d`.
+1. **Triage.** `file src/veil-x86_64` → x86-64, stripped. `--help` zeigt `-p` und `-d`.
    Die ersten 8 Bytes von `message.enc` sind die Nonce.
 2. **Schleife im Decompiler finden** (Ghidra): Suche nach `imul 0x71FED3C5`, `add 0x2A9F1B8D`
    und `shr 28`. Von dort rückwärts zu `derive_seed` und `init_table`.
@@ -49,9 +49,9 @@ Der echte Teil ist klein:
 7. **Entschlüsseln.** `klartext = chiffretext ^ S[fach]` für die ganze Datei → Gedicht mit Flag.
 
 ```bash
-python3 solution/solve.py              # entschlüsselt message.enc + Selbsttest (20 Runden)
-python3 solution/solve.py --no-selftest
-python3 solution/make_message.py       # message.enc + plaintext.txt neu erzeugen
+python3 doc/solve.py              # entschlüsselt src/message.enc + Selbsttest (20 Runden)
+python3 doc/solve.py --no-selftest
+python3 doc/make_message.py       # src/message.enc + doc/plaintext.txt neu erzeugen
 ```
 
 ## Warum das klappt (und kein Brute-Force nötig ist)
@@ -71,4 +71,5 @@ python3 solution/make_message.py       # message.enc + plaintext.txt neu erzeuge
 - **Strings entschlüsseln:** Pad `SPAD = 5B 1F A7 3C D2 66 89 E4`, `enc[i] ^ SPAD[i & 7]`.
 - **Gelöschter Diagnose-Print:** Früher gab `veil` auf Stderr zwei Hex-Bytes aus (z. B. `282b`).
   Das war nur ein Köder und ist entfernt.
-- `bin/veil-aarch64` ist noch **nicht** neu gebaut (alte Chiffre) — braucht `gcc-aarch64-linux-gnu`.
+- `src/veil-aarch64` ist die ARM-Variante derselben Chiffre (per `src/build.sh` mitgebaut).
+  Für die Aufgabe (x86-64) nicht nötig, liegt aber als Zusatz bei.

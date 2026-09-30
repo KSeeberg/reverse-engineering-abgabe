@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """(Re)generate message.enc with the real binary.
 
-    python3 solution/make_message.py
+    python3 doc/make_message.py
 
-Writes solution/plaintext.txt (= BODY, a silly poem with the flag, no fixed
-header), encrypts it with bin/veil-x86_64 under a fresh random passphrase and
-writes message.enc. Checks: `veil -d` with that passphrase round-trips and
+Writes doc/plaintext.txt (= BODY, a silly poem with the flag, no fixed
+header), encrypts it with src/veil-x86_64 under a fresh random passphrase and
+writes src/message.enc. Checks: `veil -d` with that passphrase round-trips and
 solve() recovers the file without the passphrase (new nonce if it doesn't).
 The passphrase is printed once.
 """
@@ -53,7 +53,7 @@ BODY = (
 def main() -> int:
     plaintext = BODY
     pt_path = os.path.join(HERE, "plaintext.txt")
-    enc_path = os.path.join(REPO, "message.enc")
+    enc_path = os.path.join(REPO, "src", "message.enc")
     with open(pt_path, "wb") as f:
         f.write(plaintext)
 
