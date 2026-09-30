@@ -1,0 +1,13 @@
+-----BEGIN VEIL MESSAGE-----
+Format: veil/1 stream transform, 8-byte nonce as prefix
+Origin: DHBW Mannheim - Advanced Practical IT-Security
+Notice: this header is fixed and identical in every
+veil message. The body follows the marker.
+-----BEGIN BODY-----
+
+Advanced Practical IT-Security - Reverse Engineering Challenge
+
+The passphrase only shapes a tiny 16-slot table. Seed and feedback
+are public, so whoever knows how a message starts can read the rest.
+
+DHBW{p4ssw0rd_k3y3d_str3am_2026}
