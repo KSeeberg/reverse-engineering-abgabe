@@ -10,7 +10,7 @@ ausrechnen, **welches Fach** benutzt wurde, und ohne das Passwort zu kennen, die
 Häufigkeitsanalyse erraten.
 
 Das Passwort (`veil`-Aufruf mit `-p`) wird für den Angriff nicht gebraucht.
-Es steht nur beim Erzeugen von `make_message.py` in der Ausgabe.
+Es wurde nur beim ursprünglichen Verschlüsseln von `message.enc` verwendet.
 
 ## Wie `veil` verschlüsselt (aus dem Binary gelesen)
 Im Binary steckt viel Ablenkung (AES-S-Box, Fake-Schlüssel, Dummy-Funktionen, `ptrace`).
@@ -51,7 +51,6 @@ Der echte Teil ist klein:
 ```bash
 python3 doc/solve.py              # entschlüsselt src/message.enc + Selbsttest (20 Runden)
 python3 doc/solve.py --no-selftest
-python3 doc/make_message.py       # src/message.enc + doc/plaintext.txt neu erzeugen
 ```
 
 ## Warum das klappt (und kein Brute-Force nötig ist)

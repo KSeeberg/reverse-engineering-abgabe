@@ -18,12 +18,10 @@ doc/                        Dokumentation und Lösung
   aufgabenstellung.md       Aufgabenstellung (wie sie der Studi bekommt)
   anleitung.md              Nutzerdokumentation (--help)
   loesung.md                ausführlicher Lösungsweg
-  einfache_loesung.md       kompakter Lösungsweg
   decrypted_message.txt     der wiederhergestellte Klartext (mit Flag)
   ki_einschaetzung.md       Einschätzung: wie gut hält der Schutz eine KI auf
   solve.py                  Solver (Angriff ohne Passphrase) + Selbsttest
   reference_cipher.py       Referenz-Implementierung der Chiffre
-  make_message.py           erzeugt message.enc + plaintext.txt neu
   plaintext.txt             Original-Klartext (Referenz)
 
 aufgabenordner/             das, was der Studi zum Bearbeiten erhält
