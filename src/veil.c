@@ -283,6 +283,190 @@ static noise_fn const g_vtable[] __attribute__((used)) = {
 
 static uint64_t decrypt_payload_probe(const unsigned char *data, size_t n);
 
+/* ------------------------------------------------------------------------- *
+ *  Decoy plaintext strings. Unlike the XOR-obfuscated e_* tables, these sit
+ *  in .rodata as-is, so `strings` prints them verbatim. Every one is a red
+ *  herring: fake flags, fake keys, fake config, fake diagnostics. They exist
+ *  only to bloat static analysis. bogus_decoys() below folds a byte of each
+ *  into the volatile sink so -O2/-s can't discard them.
+ * ------------------------------------------------------------------------- */
+static const char *const g_decoys[] __attribute__((used)) = {
+    /* --- fake flags (none of these decrypt message.enc) --- */
+    "DHBW{th1s_1s_n0t_th3_r3al_flag_keep_l00king}",
+    "DHBW{d3c0y_fl4g_d0_n0t_subm1t_th1s_0ne}",
+    "DHBW{aes256_cbc_was_a_lie_stream_cipher_only}",
+    "DHBW{ptrace_tr1ck_1s_a_red_herr1ng_t00}",
+    "FLAG{wrong_challenge_this_is_veil_not_that}",
+    "CTF{base64_alphabet_is_just_a_scoring_helper}",
+    /* --- fake keys / material --- */
+    "master_key=8f3a1c9d4b6e2f70a5c8d1e4b7902f3a",
+    "AES_KEY_HEX=00112233445566778899aabbccddeeff",
+    "backup_passphrase=correct-horse-battery-staple",
+    "hmac_secret=veil_integrity_2024_do_not_share",
+    "rsa_private_pem=-----BEGIN RSA PRIVATE KEY-----",
+    "salt=deadbeefcafebabe0123456789abcdef",
+    "iv_override=veil-iv0-legacy-mode-disabled",
+    /* --- fake config / telemetry --- */
+    "license_server=https://licence.veil.example/v1/check",
+    "telemetry_endpoint=https://t.veil.example/collect",
+    "update_url=https://dl.veil.example/veil/latest",
+    "config_path=/etc/veil/veil.conf",
+    "keyring_path=~/.config/veil/keyring.db",
+    "VEIL_DEBUG=0",
+    "VEIL_MODE=stream",
+    "VEIL_KDF=fnv1a-16",
+    /* --- fake diagnostics / banners --- */
+    "veil: AES-256-GCM hardware acceleration enabled",
+    "veil: key schedule expanded (14 rounds)",
+    "veil: verifying container signature...",
+    "veil: signature OK, proceeding with decrypt",
+    "veil: falling back to software AES path",
+    "veil: entropy pool seeded from getrandom(2)",
+    "veil: WARNING running under debugger, using safe key",
+    "veil: build 3.14.159 (advanced-obfuscation profile)",
+    "Contact: veil-support@example.invalid",
+    "Do not distribute. Internal build.",
+    /* --- more fake flags in assorted formats --- */
+    "DHBW{r0t13_1s_n0t_us3d_h3r3_s0rry}",
+    "DHBW{xor_w1th_0x42_g1v3s_y0u_n0th1ng}",
+    "DHBW{the_nonce_is_not_the_key_promise}",
+    "DHBW{sbox_is_standard_aes_no_secret_there}",
+    "DHBW{tbox_constants_are_public_rijndael}",
+    "DHBW{try_harder_or_read_the_source_luke}",
+    "flag: DHBW{placeholder_replaced_at_build_time}",
+    "FLAG=DHBW{env_var_flag_is_fake_too}",
+    /* --- fake internal symbol / routine names --- */
+    "veil_aes_expand_key",
+    "veil_gcm_ghash_block",
+    "veil_verify_hmac_sha256",
+    "veil_derive_master_secret",
+    "veil_unwrap_session_key",
+    "veil_check_license_signature",
+    "veil_load_keyring_entry",
+    "veil_pbkdf2_iterations=100000",
+    /* --- fake stack-trace / log lines --- */
+    "at veil_gcm_ghash_block (veil.c:812)",
+    "at veil_verify_hmac_sha256 (veil.c:1043)",
+    "at veil_unwrap_session_key (veil.c:1290)",
+    "[debug] entering decrypt_container()",
+    "[debug] tag mismatch, aborting",
+    "[debug] key id 0x3 selected from keyring",
+    "[trace] round 7/14 state=%08x",
+    "[warn] weak passphrase, deriving anyway",
+    "[error] container truncated, need >= 32 bytes",
+    "[info] using cipher suite VEIL-AES256-GCM-SHA384",
+    /* --- fake help / usage noise --- */
+    "  --keyfile <path>   read raw key material from file",
+    "  --kdf <algo>       key derivation: pbkdf2|argon2|fnv",
+    "  --rounds <n>       number of cipher rounds (default 14)",
+    "  --verify           check container HMAC before decrypt",
+    "  --license <token>  supply license token for premium mode",
+    "  --telemetry        opt in to anonymous usage stats",
+    "  --unsafe-legacy    enable deprecated AES-CBC path",
+    "Report bugs to <veil-bugs@example.invalid>.",
+    "veil is free software; see COPYING for details.",
+    "Copyright (C) 2024 The veil authors. All rights reserved.",
+    /* --- fake magic / format identifiers --- */
+    "VEILCONTAINERv3",
+    "MAGIC=0x56454C31",
+    "container_format=veil/3.0",
+    "compression=none cipher=aes-256-gcm",
+    /* --- even more fake flags --- */
+    "DHBW{lcg_state_is_seeded_but_not_like_this}",
+    "DHBW{feedback_register_is_a_dead_end_friend}",
+    "DHBW{sixteen_drawers_but_wrong_ones_haha}",
+    "DHBW{the_passphrase_never_touched_the_key}",
+    "DHBW{getrandom_nonce_is_public_in_the_file}",
+    "DHBW{rc4_keyschedule_here_is_pure_theatre}",
+    "DHBW{fnv1a_digest_leads_nowhere_useful}",
+    "DHBW{check_the_other_binary_maybe_lol_no}",
+    "DHBW{strings_grep_will_not_save_you_now}",
+    "DHBW{congratulations_on_reading_this_far}",
+    "old_flag_v1=DHBW{deprecated_2023_edition}",
+    "old_flag_v2=DHBW{deprecated_2024_edition}",
+    "staging_flag=DHBW{do_not_use_in_production}",
+    "test_flag=DHBW{unit_test_fixture_ignore_me}",
+    /* --- fake crypto parameters --- */
+    "cipher_suite_0=AES-128-CBC-HMAC-SHA1",
+    "cipher_suite_1=AES-256-GCM-SHA384",
+    "cipher_suite_2=CHACHA20-POLY1305",
+    "cipher_suite_3=VEIL-STREAM-16",
+    "argon2_memory_kib=65536",
+    "argon2_parallelism=4",
+    "argon2_time_cost=3",
+    "pbkdf2_hash=sha256 iterations=200000",
+    "scrypt_N=16384 r=8 p=1",
+    "curve=secp256r1 point_compression=on",
+    "kem=kyber768 sig=dilithium3",
+    "nonce_len=8 tag_len=16 block_len=16",
+    /* --- fake environment variables --- */
+    "VEIL_LICENSE_KEY=VL-XXXX-XXXX-XXXX-XXXX",
+    "VEIL_KEYSTORE=/var/lib/veil/keystore.jks",
+    "VEIL_HSM_SLOT=0",
+    "VEIL_HSM_PIN=000000",
+    "VEIL_LOG_LEVEL=trace",
+    "VEIL_ALLOW_INSECURE=false",
+    "VEIL_FIPS_MODE=1",
+    "VEIL_SEED_OVERRIDE=disabled",
+    "VEIL_MASTER_KEY_FILE=/root/.veil/master.key",
+    /* --- fake file paths / artefacts --- */
+    "/usr/share/veil/dictionaries/rockyou.txt",
+    "/usr/share/veil/keys/default.pem",
+    "/opt/veil/plugins/aesni.so",
+    "/opt/veil/plugins/legacy_cbc.so",
+    "/tmp/veil-XXXXXX/scratch.bin",
+    "./veil.key",
+    "./veil.iv",
+    "./container.header",
+    /* --- fake diagnostic / trace lines --- */
+    "[trace] tally_bytes: profile computed from passphrase",
+    "[trace] init_table: 16-slot permutation shuffled",
+    "[trace] derive_seed: folding embedded key with nonce",
+    "[trace] format_output: streaming %zu bytes",
+    "[trace] verify_password: constant-time compare",
+    "[debug] anti_debug: ptrace returned, not traced",
+    "[debug] run_noise: dispatched %zu bogus helpers",
+    "[debug] decrypt_payload: 10-round substitution done",
+    "[warn] fips self-test skipped in debug build",
+    "[warn] key rotation overdue by 42 days",
+    "[error] hmac verification failed: tag 0x%08x",
+    "[error] out of entropy, blocking on /dev/random",
+    "[fatal] license expired, contact sales",
+    /* --- fake help text continued --- */
+    "  --profile <name>   load named cipher profile",
+    "  --dump-keys        print derived key material (debug)",
+    "  --benchmark        run cipher throughput benchmark",
+    "  --self-test        run known-answer tests and exit",
+    "  --fips             enable FIPS 140-2 restricted mode",
+    "  --hsm <slot>       use hardware security module slot",
+    "  --wrap <keyfile>   wrap the session key under keyfile",
+    "  --aead             use authenticated encryption (GCM)",
+    "Environment: VEIL_HOME, VEIL_CONFIG, VEIL_KEYSTORE",
+    "See veil(1) and veil.conf(5) for full documentation.",
+    /* --- fake vendor / build metadata --- */
+    "Built with love by the veil crypto team",
+    "toolchain: gcc 13.3.0 target x86_64-linux-gnu",
+    "reproducible-build: SOURCE_DATE_EPOCH=1700000000",
+    "vcs-ref: 0xdeadbeefcafef00dba5eba11c0ffee42",
+    "signing-cert-fingerprint: SHA256:AA:BB:CC:DD:EE:FF",
+    "audit-id: VEIL-AUDIT-2024-0042",
+    "compliance: SOC2 ISO27001 GDPR",
+    "support-tier: enterprise-premium-plus",
+};
+
+/* fold every decoy byte into the sink so they survive stripping. Iterating the
+ * whole string (not a fixed offset) keeps this correct for any length. */
+static uint64_t bogus_decoys(const unsigned char *p, size_t n)
+{
+    uint64_t acc = (uint64_t)n ^ (uint64_t)(p ? p[0] : 0);
+    size_t cnt = sizeof(g_decoys) / sizeof(g_decoys[0]);
+    for (size_t i = 0; i < cnt; i++) {
+        for (const unsigned char *s = (const unsigned char *)g_decoys[i]; *s; ++s)
+            acc = (acc << 3) ^ (acc >> 61) ^ (uint64_t)*s;
+    }
+    return acc;
+}
+
 /* Drive the bogus helpers. Indirect calls through g_vtable with a run-time
  * index the compiler can't fold, results folded into the volatile sink. */
 static void run_noise(int argc, const unsigned char *data, size_t n)
@@ -294,6 +478,7 @@ static void run_noise(int argc, const unsigned char *data, size_t n)
         noise_fn f = g_vtable[(idx0 + i) % cnt];
         local ^= f(data, n);
     }
+    local ^= bogus_decoys(data, n);
     /* an extra opaque branch keyed on argc (unknown to the optimiser) */
     if ((((unsigned)argc * 2654435761u) & 0x8u) == 0x8u)
         local += bogus_tea(data, n) ^ decrypt_payload_probe(data, n);
