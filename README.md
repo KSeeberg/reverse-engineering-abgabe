@@ -18,7 +18,6 @@ doc/                        Dokumentation und Lösung
   aufgabenstellung.md       Aufgabenstellung (wie sie der Studi bekommt)
   anleitung.md              Nutzerdokumentation (--help)
   loesung.md                ausführlicher Lösungsweg
-  decrypted_message.txt     der wiederhergestellte Klartext (mit Flag)
   ki_einschaetzung.md       Einschätzung: wie gut hält der Schutz eine KI auf
   solve.py                  Solver (Angriff ohne Passphrase) + Selbsttest
   reference_cipher.py       Referenz-Implementierung der Chiffre
@@ -41,4 +40,5 @@ python3 doc/solve.py                 # entschlüsselt src/message.enc + Selbstte
 python3 doc/solve.py --no-selftest   # nur entschlüsseln
 ```
 
-Flag: siehe `doc/decrypted_message.txt`.
+Flag: steht in `doc/loesung.md`; `solve.py` gibt den entschlüsselten Klartext
+zudem auf der Konsole aus.
