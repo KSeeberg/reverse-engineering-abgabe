@@ -26,8 +26,6 @@ cd src
 ./veil-x86_64 --help          # Hilfe anzeigen
 ```
 
-Ist die Datei nicht ausführbar, einmalig `chmod +x veil-x86_64` setzen.
-
 ## Aufruf
 
 ```
